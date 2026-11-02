@@ -216,6 +216,13 @@ main{display:grid;grid-template-columns:1fr 300px;gap:0;height:calc(100vh - 58px
 aside{border-left:1px solid var(--ln);padding:12px;overflow-y:auto;background:#171a1f}
 aside h3{font-size:13px;color:var(--dim);margin:0 0 8px}
 .ag{display:flex;gap:8px;align-items:center;padding:6px 0;font-size:13px}
+#empty{padding:26px 18px;text-align:center;color:var(--dim)}
+#empty h2{font-size:17px;color:var(--tx);margin:0 0 6px;font-weight:600}
+#empty p{margin:0 0 18px;font-size:13px;line-height:1.9}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{padding:9px 14px;background:#171a1f;border:1px solid var(--ln);border-radius:20px;font-size:13px;color:var(--tx);cursor:pointer}
+.chip:hover{border-color:var(--ok);color:var(--ok)}
+.legend{font-size:11.5px;color:#5c6670;padding:10px 0 0;line-height:1.9;border-top:1px solid var(--ln);margin-top:10px}
 footer{padding:10px 14px;background:var(--pn);border-top:1px solid var(--ln);display:flex;gap:8px}
 #say{flex:1;padding:11px;background:#0f1114;border:1px solid var(--ln);color:var(--tx);border-radius:8px;font-size:14px}
 #go{padding:11px 18px;background:#2d6a4f;color:#fff;border:0;border-radius:8px;font-weight:600;cursor:pointer}
@@ -223,13 +230,37 @@ footer{padding:10px 14px;background:var(--pn);border-top:1px solid var(--ln);dis
 </style>
 <header><b>CSchat-Cell</b><span id="st" style="color:var(--dim);font-size:12px">连接中…</span>
 <div id="bar"><i></i></div><button id="pause">全局暂停</button></header>
-<main><div id="log"></div><aside><h3>硅基劳动力</h3><div id="agents"></div></aside></main>
+<main>
+<div id="logwrap" style="overflow-y:auto"><div id="empty">
+  <h2>一个会自己干活的细胞</h2>
+  <p>说一句话，中枢把它拆成任务树，硅基劳动力分头去做。<br>碳基人只管两件事：<b>下指令</b>、<b>拍板</b>。</p>
+  <div class="chips">
+    <div class="chip" onclick="fire('做一份新消费品牌竞品分析，明天下午三点前要')">做份竞品分析</div>
+    <div class="chip" onclick="fire('查一下上海天气，如果下雨就发通知给我')">查天气并通知</div>
+    <div class="chip" onclick="fire('整理一份明年放假安排表并发到群里')">整理放假安排</div>
+  </div>
+</div><div id="log"></div></div>
+<aside><h3>硅基劳动力（细胞器）</h3><div id="agents"></div><div class="legend">● 绿=待命　● 黄=运行中　● 紫=等你拍板　● 红=报错<br>细胞核：中枢（唯一拆解者）<br>伴生：Aina（只复述意图，不拆解）</div></aside></main>
 <footer><input id="say" placeholder="说一句，回车下发（中枢负责拆解）" autofocus><button id="go">下发</button></footer>
 <script>
 let last=0;const seen=new Set();
+const AGENTS=[{n:'中枢 nucleus',s:'idle'},{n:'Aina 伴生',s:'idle'},{n:'crawler 抓取',s:'idle'},{n:'writer 交付',s:'idle'},{n:'tool:weather',s:'idle'}];
+function paintAgents(override){
+  const box=document.getElementById('agents');box.innerHTML='';
+  AGENTS.forEach(a=>{
+    const st=(override&&override[a.n])||a.s;
+    const d=document.createElement('div');d.className='ag';
+    d.innerHTML='<span class="dot s-'+(st==='idle'?'pending':st)+'"></span><span>'+a.n+'</span>';
+    box.appendChild(d);
+  });
+}
+paintAgents();
+function fire(t){document.getElementById('say').value=t;say();}
 function add(m){
   if(seen.has(m.msg_id))return;seen.add(m.msg_id);
+  const e=document.getElementById('empty');if(e)e.style.display='none';
   const log=document.getElementById('log');
+  if(m.type==='agent.status'&&m.payload&&m.payload.agent_id){AGENTS.forEach(a=>{if(a.n===m.payload.agent_id)a.s=m.payload.state;});paintAgents();}
   if(m.type==='task.plan'){
     const t=document.createElement('div');t.className='card';
     const id='card-'+m.payload.task_id;
